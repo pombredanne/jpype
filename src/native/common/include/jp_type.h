@@ -1,5 +1,5 @@
 /*****************************************************************************
-   Copyright 2004 Steve Ménard
+   Copyright 2004 Steve MÃ©nard
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -25,6 +25,13 @@ enum EMatchType
 	_exact
 };
 
+// predeclaration of PyObject
+#ifndef PyObject_HEAD
+struct _object;
+typedef _object PyObject;
+#endif
+
+
 /**
  * Base class for all JPype Types, be it primitive, class or array
  */
@@ -32,10 +39,6 @@ class JPType
 {
 protected :
 	JPType()
-	{
-	}
-	
-	virtual ~JPType()
 	{
 	}
 	
@@ -49,7 +52,7 @@ public :
 	virtual HostRef*   asHostObject(jvalue val) = 0 ;
 	virtual HostRef*   asHostObjectFromObject(jvalue val) = 0;
 	
-	virtual JPTypeName getName() = 0;
+	virtual const JPTypeName& getName() const = 0;
 	
 	virtual EMatchType canConvertToJava(HostRef* obj) = 0;
 
@@ -57,7 +60,7 @@ public :
 	virtual jobject    convertToJavaObject(HostRef* obj) = 0;
 
 	virtual bool       isObjectType() = 0;
-	virtual JPTypeName getObjectType() = 0;
+	virtual const JPTypeName& getObjectType() const = 0;
 	
 	virtual HostRef*   invokeStatic(jclass, jmethodID, jvalue*) = 0;
 	virtual HostRef*   invoke(jobject, jclass, jmethodID, jvalue*) = 0;
@@ -65,11 +68,16 @@ public :
 	virtual jarray     newArrayInstance(int size) = 0;
 	virtual vector<HostRef*>   getArrayRange(jarray, int start, int length) = 0;
 	virtual void       setArrayRange(jarray, int start, int length, vector<HostRef*>& vals) = 0;
+	virtual void       setArrayRange(jarray, int start, int length, PyObject* seq) = 0;
 	virtual HostRef*   getArrayItem(jarray, int ndx) = 0;
 	virtual void       setArrayItem(jarray, int ndx, HostRef* val) = 0;
-	virtual void       setArrayValues(jarray, HostRef*) = 0;
+	virtual PyObject* getArrayRangeToSequence(jarray, int start, int length) = 0;
 
 	virtual HostRef*   convertToDirectBuffer(HostRef* src) = 0;
+
+	virtual ~JPType()
+	{
+	}
 };
 
 #endif // _JPTYPE_H_

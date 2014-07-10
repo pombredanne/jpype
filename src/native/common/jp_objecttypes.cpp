@@ -83,7 +83,7 @@ HostRef* JPObjectType::invoke(jobject claz, jclass clazz, jmethodID mth, jvalue*
 	JPTypeName name = JPJni::getClassName(v.l);
 	JPType* type = JPTypeManager::getType(name);
 	HostRef* ref = type->asHostObject(v);
-	TRACE1("Successfulyl converted to host reference");
+	TRACE1("Successfully converted to host reference");
 	return ref;
 	
 	TRACE_OUT;
@@ -116,9 +116,9 @@ void JPObjectType::setInstanceValue(jobject c, jfieldID fid, HostRef* obj)
 jarray JPObjectType::newArrayInstance(int sz)
 {
 	JPCleaner cleaner;
-	
+
 	jclass c = getClass();
-	cleaner.addLocal(c);
+	cleaner.addGlobal(c);
 	
 	return JPEnv::getJava()->NewObjectArray(sz, c, NULL);
 }
@@ -213,37 +213,6 @@ HostRef* JPObjectType::asHostObjectFromObject(jvalue val)
 HostRef* JPObjectType::convertToDirectBuffer(HostRef* src)
 {
 	RAISE(JPypeException, "Unable to convert to Direct Buffer");
-}
-
-void JPObjectType::setArrayValues(jarray a, HostRef* values)
-{
-    jobjectArray array = (jobjectArray)a;    
-    JPCleaner cleaner;
-
-    try {
-		bool converted = true;
-
-		// Optimize what I can ...
-		// TODO also optimize array.array ...
-		if (JPEnv::getHost()->isSequence(values))
-		{
-			int len = JPEnv::getHost()->getSequenceLength(values);
-			for (int i = 0; i < len; i++)
-			{
-				HostRef* v = JPEnv::getHost()->getSequenceItem(values, i);
-				JPEnv::getJava()->SetObjectArrayElement(array, i, convertToJava(v).l);
-				delete v;
-			}
-
-			converted = true;
-		}	
-		else
-		{
-			RAISE(JPypeException, "Unable to convert to Object array");
-		}
-
-    }
-    RETHROW_CATCH( ; );
 }
 
 //-------------------------------------------------------------------------------
@@ -359,7 +328,7 @@ jvalue JPStringType::convertToJava(HostRef* obj)
 		jstr[i] = (jchar)wstr[i];  
 	}
 	jstring res = JPEnv::getJava()->NewString(jstr, (jint)wstr.length());
-	delete jstr;
+	delete[] jstr;
 	
 	v.l = res;
 	

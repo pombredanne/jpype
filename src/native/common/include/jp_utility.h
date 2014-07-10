@@ -17,13 +17,15 @@
 #ifndef _JPYPE_UTILITY_H_
 #define _JPYPE_UTILITY_H_
 
+#include <jni.h>
+
 #define RAISE(exClass, msg) { throw new exClass(msg, __FILE__, __LINE__); }
 
 /** Support Exception for JPype-generated exception */
 class JPypeException
 {
 public :
-	JPypeException(char* msn, const char* f, int l) 
+	JPypeException(const char* msn, const char* f, int l) 
 	{
 		file=f, line=l;
 		std::stringstream str;
@@ -31,7 +33,7 @@ public :
 		this->msg = str.str();
 	}
 
-	JPypeException(string msn, const char* f, int l)
+	JPypeException(const string& msn, const char* f, int l)
 	{
 		file=f, line=l;
 		std::stringstream str;
@@ -111,31 +113,57 @@ public :
 	template <class T>
 	void trace(T msg)
 	{
+#ifdef TRACING
 		stringstream str;
 		str << msg;
 		trace1(m_Name.c_str(), str.str());
+#endif
 	}
 	
 	template <class T, class U>
 	void trace(T msg1, U msg2)
 	{
+#ifdef TRACING
 		stringstream str;
 		str << msg1 << " " << msg2;
 		trace1(m_Name.c_str(), str.str());
+#endif
 	}
 
 	template <class T, class U, class V>
 	void trace(T msg1, U msg2, V msg3)
 	{
+#ifdef TRACING
 		stringstream str;
 		str << msg1 << " " << msg2 << " " << msg3;
 		trace1(m_Name.c_str(), str.str());
+#endif
 	}
 	
 private :
 	static void traceIn(const char* msg);
 	static void traceOut(const char* msg, bool error);
 	static void trace1(const char* name, const string& msg);
+};
+
+/** Use this class instewad of basic_string<jchar> because compiler support is not great cross-platform */
+class JCharString
+{
+public :
+	JCharString(const jchar*);
+	JCharString(const JCharString&);
+	JCharString(size_t);
+	virtual ~JCharString();
+
+	const jchar* c_str();
+
+	size_t length() { return m_Length; }
+
+	jchar& operator[](size_t ndx) { return m_Value[ndx]; }
+
+private :
+	jchar* m_Value;
+	size_t m_Length;
 };
 
 #endif // _JPYPE_UTILITY_H_

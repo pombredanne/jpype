@@ -6,23 +6,26 @@ import codecs
 import platform
 from glob import glob
 
-from distutils.core import setup
-from distutils.core import Extension
-
+from setuptools import setup
+from setuptools import Extension
+from setuptools.command.build_ext import build_ext
 
 def read_utf8(*parts):
     filename = os.path.join(os.path.dirname(__file__), *parts)
     return codecs.open(filename, encoding='utf-8').read()
 
-
 def find_sources():
     cpp_files = []
     for dirpath, dirnames, filenames in os.walk('src'):
         for filename in filenames:
-            if filename.endswith('.cpp'):
+            if filename.endswith('.cpp') or filename.endswith('.c'):
                 cpp_files.append(os.path.join(dirpath, filename))
     return cpp_files
 
+def show_error(msg):
+    print('*' * 80)
+    print(msg)
+    print('*' * 80)
 
 platform_specific = {
     'include_dirs': [
@@ -45,28 +48,44 @@ if sys.platform == 'win32':
         os.path.join(java_home, 'include', 'win32')
     ]
 elif sys.platform == 'darwin':
-    # Changes according to:
-    # http://stackoverflow.com/questions/8525193/cannot-install-jpype-on-os-x-lion-to-use-with-neo4j
-    # and
-    # http://blog.y3xz.com/post/5037243230/installing-jpype-on-mac-os-x
-    osx = platform.mac_ver()[0][:4]
-    if not java_home:
-        print "No JAVA_HOME Environment Variable set. Trying to guess it..."
-        java_home = '/Library/Java/Home'
-    if osx == '10.6':
-        # I'm not sure if this really works on all 10.6 - confirm please :)
-        java_home = ('/Developer/SDKs/MacOSX10.6.sdk/System/Library/'
-                     'Frameworks/JavaVM.framework/Versions/1.6.0/')
-    # With the next OSX release we should probably change this around a bit ;-)
-    elif osx in ('10.7', '10.8', '10.9'):
-        java_home = ('/System/Library/Frameworks/JavaVM.framework/'
-                     'Versions/Current/')
+    def getJDKIncludes(java_home):
+        possible_includedirs = [os.path.join(java_home, 'Headers'),
+                                os.path.join(java_home, 'include'),
+                                os.path.join(java_home, 'include/darwin'),
+                                # fallback
+                                '/System/Library/Frameworks/JavaVM.framework/Headers']
+        # make sure jni.h is found - or equivalently this java home is a JDK
+        if filter(os.path.exists, [os.path.join(d, 'jni.h') for d in possible_includedirs]) == []:
+            show_error('Your current java home does not point to a Java Development Kit (JDK)!\n'
+                       'We were not able to find a jni.h file.\n'
+                       'Tried with JAVA_HOME=%s\n' 
+                       'You can either install the Java Developer package from Apple\n'
+                       'OR the OpenJDK from http://oracle.com' % java_home)
+            raise RuntimeError
+        # return existing include dirs
+        return filter(os.path.exists, possible_includedirs)
+
+    if not java_home: # try to estimate, should work solid for osx > 10.5
+        osx = platform.mac_ver()[0][:4]
+        from distutils.version import StrictVersion
+
+        # for osx > 10.5 we have the nice util /usr/libexec/java_home available
+        if StrictVersion(osx) >= StrictVersion('10.6'):
+            import subprocess
+            # call java_home detector 
+            if 'check_output' in dir(subprocess): 
+            	java_home = subprocess.check_output(['/usr/libexec/java_home']).strip()
+            else:
+                java_home = subprocess.Popen(['/usr/libexec/java_home'], stdout=subprocess.PIPE).communicate()[0]
+    else: # osx < 10.6
+        java_home = '/System/Library/Frameworks/JavaVM.framework/Home/'
+
     platform_specific['libraries'] = ['dl']
-    platform_specific['library_dir'] = [os.path.join(java_home, 'Libraries')]
+    # this raises warning:
+    # distutils/extension.py:133: UserWarning: Unknown Extension options: 'library_dir'
+    #platform_specific['library_dir'] = [os.path.join(java_home, 'Libraries')]
     platform_specific['define_macros'] = [('MACOSX', 1)]
-    platform_specific['include_dirs'] += [
-        os.path.join(java_home, 'Headers'),
-    ]
+    platform_specific['include_dirs'] += getJDKIncludes(java_home)
 else:
     if not java_home:
         print "No JAVA_HOME Environment Variable set. Trying to guess it..."
@@ -80,7 +99,7 @@ else:
                 java_home = home
                 break
         else:
-            raise RuntimeError(
+            show_error(
                 "No Java/JDK could be found. I looked in the following "
                 "directories: \n\n%s\n\nPlease check that you have it "
                 "installed.\n\nIf you have and the destination is not in the "
@@ -91,9 +110,9 @@ else:
                 "pull request with a fix on github: "
                 "https://github.com/originell/jpype/"
                 % '\n'.join(possible_homes))
-
+            raise RuntimeError
     platform_specific['libraries'] = ['dl']
-    platform_specific['library_dir'] = [os.path.join(java_home, 'lib')]
+    #platform_specific['library_dir'] = [os.path.join(java_home, 'lib')]
     platform_specific['include_dirs'] += [
         os.path.join(java_home, 'include'),
         os.path.join(java_home, 'include', 'linux'),
@@ -102,12 +121,21 @@ else:
 
 jpypeLib = Extension(name='_jpype', **platform_specific)
 
+# omit -Wstrict-prototypes from CFLAGS since its only valid for C code.
+class my_build_ext(build_ext):
+    def initialize_options(self, *args):
+        from distutils.sysconfig import get_config_vars
+        (opt,) = get_config_vars('OPT')
+        os.environ['OPT'] = ' '.join(flag for flag in opt.split() if flag != '-Wstrict-prototypes')
+        build_ext.initialize_options(self)
 
 setup(
     name='JPype1',
-    version='0.5.4.5',
-    description='Friendly jpype fork with focus on easy installation.',
-    long_description=read_utf8('README.rst'),
+    version='0.5.5.2',
+    description='A Python to Java bridge.',
+    long_description=(read_utf8('README.rst') + '\n\n' +
+                      read_utf8('doc/CHANGELOG.rst') + '\n\n' +
+                      read_utf8('AUTHORS.rst')),
     license='License :: OSI Approved :: Apache Software License',
     author='Steve Menard',
     author_email='devilwolf@users.sourceforge.net',
@@ -122,7 +150,6 @@ setup(
     ],
     classifiers=[
         'Programming Language :: Java',
-        'Programming Language :: Python :: 2.5',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
@@ -132,5 +159,6 @@ setup(
         'jpype': 'src/python/jpype',
         'jpypex': 'src/python/jpypex',
     },
+    cmdclass={'build_ext': my_build_ext},
     ext_modules=[jpypeLib],
 )

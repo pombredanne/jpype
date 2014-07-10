@@ -1,5 +1,5 @@
 /*****************************************************************************
-   Copyright 2004 Steve Ménard
+   Copyright 2004 Steve Mï¿½nard
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,13 +17,18 @@
 #ifndef _JPARRAY_H_
 #define _JPARRAY_H_
 
+#ifndef PyObject_HEAD
+struct _object;
+typedef _object PyObject;
+#endif
+
 /**
  * Class to wrap Java Class and provide low-level behavior
  */
 class JPArray : public JPObjectBase
 {
 public :
-	JPArray(JPTypeName name, jarray inst);
+	JPArray(const JPTypeName& name, jarray inst);
 	virtual~ JPArray();
 
 public :
@@ -34,7 +39,10 @@ public :
 
 	int       getLength();	
 	vector<HostRef*>  getRange(int start, int stop);
+	// return Python Sequence from underlying jarray
+	PyObject* getSequenceFromRange(int start, int stop);
 	void      setRange(int start, int stop, vector<HostRef*>& val);
+	void      setRange(int start, int stop, PyObject* sequence);
 	void      setItem(int ndx, HostRef*);
 	HostRef*  getItem(int ndx);
 

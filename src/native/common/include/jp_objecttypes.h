@@ -31,12 +31,12 @@ protected :
 	}
 	
 public :
-	virtual JPTypeName getName()
+	virtual const JPTypeName& getName() const
 	{
 		return m_Type;
 	}
 	
-	virtual JPTypeName getObjectType()
+	virtual const JPTypeName& getObjectType() const
 	{
 		return m_ObjectTypeName;
 	}
@@ -62,8 +62,15 @@ public :
 	virtual void      setArrayRange(jarray, int start, int length, vector<HostRef*>& vals);
 	virtual HostRef* getArrayItem(jarray, int ndx);
 	virtual void      setArrayItem(jarray, int ndx, HostRef* val);
-	virtual void       setArrayValues(jarray, HostRef*);
+	virtual PyObject* getArrayRangeToSequence(jarray, int start, int length)
+	{
+		RAISE(JPypeException, "not impled for void*");
+	}
 	
+	virtual void setArrayRange(jarray, int start, int len, PyObject*) {
+		RAISE(JPypeException, "not impled for void*");
+	}
+
 	virtual HostRef*   convertToDirectBuffer(HostRef* src);
 
 protected :

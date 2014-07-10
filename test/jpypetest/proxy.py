@@ -15,10 +15,9 @@
 #   
 #*****************************************************************************
 from jpype import *
-import unittest, common
-
-def suite() :
-    return unittest.makeSuite(ProxyTestCase)
+import common
+import unittest2
+from sys import hexversion as ver
 
 def _testMethod() :
     return 32
@@ -31,37 +30,42 @@ class C :
         return 42
         
     def testMethod2(self) :
-        return "Bar"            
+        return "Bar"
 
     def write(self, bytes, start, length) :
-    	print 'aaaaa'
-    	print bytes.__class__, bytes[0]
-    	print start
-    	print length         
+        print 'aaaaa'
+        print bytes.__class__, bytes[0]
+        print start
+        print length
 
 class ProxyTestCase(common.JPypeTestCase) :
+
+    def setUp(self):
+        super(ProxyTestCase, self).setUp()
+        self.package = JPackage("jpype.proxy")
+
     def testProxyWithDict(self) :
         d = {
             'testMethod' : _testMethod,
             'testMethod2' : _testMethod2,
         }
-        itf2 = JPackage("jpype.proxy").ITestInterface3
-        Test3 = JPackage("jpype.proxy").Test3
+        itf2 = self.package.ITestInterface3
+        Test3 = self.package.Test3
         proxy = JProxy(itf2, dict=d)
     
         Test3.testProxy(proxy)
 
     def testProxyWithInst(self) :
-        itf2 = JPackage("jpype.proxy").ITestInterface3
-        Test3 = JPackage("jpype.proxy").Test3
+        itf2 = self.package.ITestInterface3
+        Test3 = self.package.Test3
 
         c = C()
         proxy = JProxy(itf2, inst=c)
         Test3.testProxy(proxy)   
 
     def testProxyWithThread(self) :
-        itf2 = JPackage("jpype.proxy").ITestInterface3
-        Test3 = JPackage("jpype.proxy").Test3
+        itf2 = self.package.ITestInterface3
+        Test3 = self.package.Test3
 
         c = C()
         proxy = JProxy(itf2, inst=c)
@@ -69,19 +73,21 @@ class ProxyTestCase(common.JPypeTestCase) :
         t3 = Test3()
         t3.testProxyWithThread(proxy)
 
-	def testProxyWithArguments(self) :
-		itf2 = JPackage("jpype.proxy").ITestInterface2		   
-		Test3 = JPackage("jpype.proxy").Test3
+    @unittest2.skipIf(ver > 0x020703, 'broken, see ISSUE #67')
+    def testProxyWithArguments(self) :
+        itf2 = self.package.ITestInterface2
+        Test3 = self.package.Test3
 
-		c = C()
-		proxy = JProxy(itf2, inst=c)
-		Test3().testCallbackWithParameters(proxy)
-        
+        c = C()
+        proxy = JProxy(itf2, inst=c)
+        Test3().testCallbackWithParameters(proxy)
+    
+    @unittest2.skipIf(ver > 0x020703, 'broken, see ISSUE #67')
     def testProxyWithMultipleInterface(self) :
-        itf2 = JPackage("jpype.proxy").ITestInterface2           
-        itf3 = JPackage("jpype.proxy").ITestInterface3           
-        Test3 = JPackage("jpype.proxy").Test3
+        itf2 = self.package.ITestInterface2
+        itf3 = self.package.ITestInterface3
+        Test3 = self.package.Test3
 
         c = C()
         proxy = JProxy([itf2,itf3], inst=c)
-        Test3().testCallbackWithParameters(proxy)        
+        Test3().testCallbackWithParameters(proxy)

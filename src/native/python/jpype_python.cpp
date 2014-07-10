@@ -106,7 +106,7 @@ PyObject* JPypeJavaProxy::createProxy(PyObject*, PyObject* arg)
 
 		PyObject* self;
 		PyObject* intf;
-
+		//TODO: why is self not initialized?
 		JPyArg::parseTuple(arg, "OO", &self, &intf);
 
 		std::vector<jclass> interfaces;
@@ -120,7 +120,7 @@ PyObject* JPypeJavaProxy::createProxy(PyObject*, PyObject* arg)
 			PyObject* claz = JPyObject::getAttrString(subObj, "__javaclass__");
 			PyJPClass* c = (PyJPClass*)claz;
 			jclass jc = c->m_Class->getClass();
-			cleaner.addLocal(jc);
+			cleaner.addGlobal(jc);
 			interfaces.push_back(jc);
 		}
 		
@@ -190,7 +190,6 @@ static PyMethodDef jpype_methods[] =
   {"setArrayItem", &JPypeJavaArray::setArrayItem, METH_VARARGS, ""},
   {"getArraySlice", &JPypeJavaArray::getArraySlice, METH_VARARGS, ""},
   {"setArraySlice", &JPypeJavaArray::setArraySlice, METH_VARARGS, ""},
-  {"setArrayValues", &JPypeJavaArray::setArrayValues, METH_VARARGS, ""},
   {"newArray", &JPypeJavaArray::newArray, METH_VARARGS, ""},
 
   {"setJavaExceptionClass", &setJavaExceptionClass, METH_VARARGS, ""},
@@ -219,6 +218,10 @@ PyMODINIT_FUNC init_jpype()
 	PyJPBoundMethod::initType(module);	
 	PyJPClass::initType(module);	
 	PyJPField::initType(module);	
+
+#if (PY_VERSION_HEX < 0x02070000)
+	jpype_memoryview_init(module);
+#endif
 }
 
 PyObject* detachRef(HostRef* ref)

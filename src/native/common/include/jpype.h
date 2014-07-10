@@ -20,7 +20,9 @@
 // Define this to generate the trace calls
 
 // Define this to make the trace calls do their output. If you change this only the core.cpp needs to be recompiled
-//#define JPYPE_TRACING_INTERNAL
+#ifdef TRACING
+#define JPYPE_TRACING_INTERNAL
+#endif
 #define JPYPE_TRACING_OUTPUT cerr
 
 #define TRACE_IN(n) JPypeTracer _trace(n); try {
@@ -42,8 +44,6 @@
 	#define JPYPE_LINUX
 #endif
 
-#include <jni.h>
-
 #ifdef WIN32
 	#ifdef __GNUC__
 		// JNICALL causes problem for funtions prototypes .. since I am nto defining any JNI methods there isno need for it
@@ -59,36 +59,20 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
-using namespace std;
+using std::map;
+using std::string;
+using std::stringstream;
+using std::cout; using std::cerr; using std::endl;
+using std::vector;
 
 /** The following functions are delcared here but actually defined in the platform_specific file */
 void longToHexString(long value, char* outStr);
 
 /** Definition of commonly used template types */
 typedef vector<string> StringVector;
-
-/** Use this class instewad of basic_string<jchar> because compiler support is not great cross-platform */
-class JCharString
-{
-public :
-	JCharString(const jchar*);
-	JCharString(const JCharString&);
-	JCharString(size_t);
-	virtual ~JCharString();
-	
-	const jchar* c_str();
-	
-	size_t length() { return m_Length; }
-	
-	jchar& operator[](size_t ndx) { return m_Value[ndx]; }
-	
-private :
-	jchar* m_Value;
-	size_t m_Length;
-};
 
 
 // Base utility headers

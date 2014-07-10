@@ -1,5 +1,5 @@
 /*****************************************************************************
-   Copyright 2004 Steve Ménard
+   Copyright 2004 Steve Mï¿½nard
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -28,31 +28,31 @@
 class JPTypeName
 {
 public:
-//AT's comments on porting:
-// 1) Originally this ETypes enum was declraed outside of this JPTypeName class.
-// This, however, broke compilation on AIX platform because of a conflict with some system headers;
-// As a compromise, it was made part of JPTypeName
-        enum ETypes {
-             _unknown,
-             _void,
-             _byte, _short, _int, _long,
-             _float, _double,
-             _char,
-             _boolean,
+	enum ETypes {
+		_unknown,
+		_void,
+		_byte,
+		_short,
+		_int,
+		_long,
+		_float,
+		_double,
+		_char,
+		_boolean,
 
-             _object,
-             _class,
-             _string,
-             _array
-        };
+		_object,
+		_class,
+		_string,
+		_array
+	};
 
 	JPTypeName() :
-		m_Type(_unknown)
+		 m_SimpleName(""), m_NativeName(""), m_Type(_unknown)
 	{
 	}
 	
 private :
-	JPTypeName(string simple, string native, ETypes t): 
+	JPTypeName(const string& simple, const string& native, ETypes t):
 		m_SimpleName(simple), 
 		m_NativeName(native), 
 		m_Type(t)
@@ -68,10 +68,13 @@ public :
 	{
 	}
 	
-	/** Destructor */
-	virtual ~JPTypeName() 
-	{}
-	
+	JPTypeName& operator=(const JPTypeName& other) {
+		this->m_SimpleName = other.getSimpleName();
+		this->m_NativeName = other.getNativeName();
+		this->m_Type = other.getType();
+		return *this;
+	}
+
 public :
 	/**
 	 * Initialize the cache of type-name to ETypes
@@ -82,24 +85,24 @@ public :
 	static JPTypeName fromSimple(const char* name);
 	static JPTypeName fromType(ETypes t);
 	
-	string getSimpleName()
+	const string& getSimpleName() const
 	{
 		return m_SimpleName;
 	}
 	
-	string getNativeName()
+	const string& getNativeName() const
 	{
 		return m_NativeName;
 	}
 
-	JPTypeName getComponentName();
+	JPTypeName getComponentName() const;
 
-	ETypes getType()
+	ETypes getType() const
 	{
 		return m_Type;
 	}
 
-	bool isObjectType()
+	bool isObjectType() const
 	{
 		return m_Type >= _object;
 	}
@@ -107,7 +110,15 @@ public :
 private :
 	string m_SimpleName;
 	string m_NativeName;
-	ETypes m_Type;	
+	ETypes m_Type;
+
+	typedef map<string, string> NativeNamesMap;
+	typedef map<string, ETypes> DefinedTypesMap;
+	typedef map<ETypes, string> NativeTypesMap;
+
+	static NativeNamesMap nativeNames;
+	static DefinedTypesMap definedTypes;
+	static NativeTypesMap nativeTypes;
 };
 
 #endif // _JPTYPENAME_H_

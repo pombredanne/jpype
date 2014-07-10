@@ -31,7 +31,7 @@ class PythonException : public HostException
 {
 public :
 	PythonException();	
-	PythonException(PythonException& ex);
+	PythonException(const PythonException& ex);
 
 	virtual ~PythonException();
 	
@@ -73,32 +73,32 @@ class JPyArg : public JPythonEnvHelper
 {
 public :
 	template<typename T1>
-	static void parseTuple(PyObject* arg, char* pattern, T1 a1)
+	static void parseTuple(PyObject* arg, const char* pattern, T1 a1)
 	{
 		PY_CHECK( PyArg_ParseTuple(arg, pattern, a1) );
 	}
 
 	template<typename T1, typename T2>
-	static void parseTuple(PyObject* arg, char* pattern, T1 a1, T2 a2)
+	static void parseTuple(PyObject* arg, const char* pattern, T1 a1, T2 a2)
 	{
 		PY_CHECK( PyArg_ParseTuple(arg, pattern, a1, a2) );
 	}
 
 	template<typename T1, typename T2, typename T3>
-	static void parseTuple(PyObject* arg, char* pattern, T1 a1, T2 a2, T3 a3)
+	static void parseTuple(PyObject* arg, const char* pattern, T1 a1, T2 a2, T3 a3)
 	{
 		PY_CHECK( PyArg_ParseTuple(arg, pattern, a1, a2, a3) );
 	}
 
 	template<typename T1, typename T2, typename T3, typename T4>
-	static void parseTuple(PyObject* arg, char* pattern, T1 a1, T2 a2, T3 a3, T4 a4)
+	static void parseTuple(PyObject* arg, const char* pattern, T1 a1, T2 a2, T3 a3, T4 a4)
 	{
 		PY_CHECK( PyArg_ParseTuple(arg, pattern, a1, a2, a3, a4)) ;
 		
 	}
 
 	template<typename T1, typename T2, typename T3, typename T4, typename T5>
-	static void parseTuple(PyObject* arg, char* pattern, T1 a1, T2 a2, T3 a3, T4 a4, T5 a5)
+	static void parseTuple(PyObject* arg, const char* pattern, T1 a1, T2 a2, T3 a3, T4 a4, T5 a5)
 	{
 		PY_CHECK( PyArg_ParseTuple(arg, pattern, a1, a2, a3, a4, a5)) ;
 		
@@ -155,7 +155,8 @@ public :
 	static void setAttrString(PyObject*, const char*, PyObject *);
 	static bool isInstance(PyObject* obj, PyObject* t);
 	static bool isSubclass(PyObject* obj, PyObject* t);
-
+	static bool isMemoryView(PyObject* obj);
+	static void AsPtrAndSize(PyObject *obj, char **buffer, Py_ssize_t *);
 };
 
 class JPyInt : public JPythonEnvHelper

@@ -99,7 +99,7 @@ public :
 	static void deleteObjectJValueDestructor(void* data, void* desc)
 	{
 		jvalue* pv = (jvalue*)data;
-		JPEnv::getJava()->DeleteGlobalRef(pv->l);
+		JPEnv::getJava()->DeleteLocalRef(pv->l);
 		delete pv;
 	}
 
@@ -237,6 +237,8 @@ public :
 	virtual HostRef* getJavaException(HostException*);
 	virtual void clearError();
 	virtual void printReferenceInfo(HostRef* obj);
+	virtual bool isByteBuffer(HostRef*);
+	virtual void getByteBufferPtr(HostRef*, char**, long&);
 };
 
 #endif // _PYHOSTENV_H_

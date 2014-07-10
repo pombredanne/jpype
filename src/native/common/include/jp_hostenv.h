@@ -23,6 +23,8 @@ public :
 	HostRef(void* data, bool acquire);
 	HostRef(void* data);
 	virtual ~HostRef();
+	HostRef(const HostRef&);
+	HostRef& operator=(const HostRef&);
 	
 public :
 	HostRef* copy();
@@ -36,7 +38,7 @@ private :
 };
 
 
-// Pre-delcare those required types
+// Pre-declare those required types
 class JPArray;
 class JPArrayClass;
 class JPClass;
@@ -148,6 +150,8 @@ public :
 	virtual void clearError() = 0;
 
 	virtual void printReferenceInfo(HostRef* obj) = 0;
+	virtual bool isByteBuffer(HostRef*) = 0;
+	virtual void getByteBufferPtr(HostRef*, char**, long&) = 0;
 };
 
 #endif // _JPHOSTENV_H_

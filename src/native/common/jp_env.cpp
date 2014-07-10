@@ -16,8 +16,24 @@
 *****************************************************************************/   
 #include <jpype.h>
 
-HostEnvironment* JPEnv::s_Host = NULL;
-JPJavaEnv*       JPEnv::s_Java = NULL;
+namespace { // impl details
+	 HostEnvironment* s_Host = NULL;
+	 JPJavaEnv*       s_Java = NULL;
+}
+
+JPJavaEnv* JPEnv::getJava()
+{
+	return s_Java;
+}
+HostEnvironment* JPEnv::getHost()
+{
+	return s_Host;
+}
+
+bool JPEnv::isInitialized()
+{
+	return getJava() != NULL && getHost() != NULL;
+}
 
 void JPEnv::init(HostEnvironment* hostEnv)
 {
@@ -48,7 +64,8 @@ void JPEnv::loadJVM(const string& vmPath, char ignoreUnrecognized, const StringV
 		jniArgs.options[i].optionString = (char*)args[i].c_str();
 	}
 
-	s_Java = JPJavaEnv::CreateJavaVM((void*)&jniArgs);  
+	s_Java = JPJavaEnv::CreateJavaVM((void*)&jniArgs);
+	free(jniArgs.options);
     
 	if (s_Java == NULL) {
 		RAISE(JPypeException, "Unable to start JVM");
@@ -246,42 +263,27 @@ void JPCleaner::remove(HostRef* obj)
 
 void JPCleaner::addAllGlobal(vector<jobject>& r) 
 {
-	for (vector<jobject>::iterator cur = r.begin(); cur != r.end(); cur++)
-	{
-		addGlobal(*cur);
-	}
+	m_GlobalJavaObjects.insert(m_GlobalJavaObjects.end(), r.begin(), r.end());
 }
 
 void JPCleaner::addAllGlobal(vector<jclass>& r) 
 {
-	for (vector<jclass>::iterator cur = r.begin(); cur != r.end(); cur++)
-	{
-		addGlobal(*cur);
-	}
+	m_GlobalJavaObjects.insert(m_GlobalJavaObjects.end(), r.begin(), r.end());
 }
 
 void JPCleaner::addAllLocal(vector<jobject>& r) 
 {
-	for (vector<jobject>::iterator cur = r.begin(); cur != r.end(); cur++)
-	{
-		addLocal(*cur);
-	}
+	m_LocalJavaObjects.insert(m_LocalJavaObjects.end(), r.begin(), r.end());
 }
 
 void JPCleaner::addAllLocal(vector<jclass>& r) 
 {
-	for (vector<jclass>::iterator cur = r.begin(); cur != r.end(); cur++)
-	{
-		addLocal(*cur);
-	}
+	m_LocalJavaObjects.insert(m_LocalJavaObjects.end(), r.begin(), r.end());
 }
 
 void JPCleaner::addAll(vector<HostRef*>& r) 
 {
-	for (vector<HostRef*>::iterator cur = r.begin(); cur != r.end(); cur++)
-	{
-		add(*cur);
-	}
+	m_HostObjects.insert(m_HostObjects.end(), r.begin(), r.end());
 }
 
 void JPCleaner::removeAllGlobal(vector<jobject>& r)
@@ -329,6 +331,17 @@ HostRef::~HostRef()
 {
 	JPEnv::getHost()->releaseRef(m_HostData);
 }
+
+HostRef::HostRef(const HostRef& h)
+{
+	m_HostData = JPEnv::getHost()->acquireRef(h.m_HostData);
+}
+
+HostRef& HostRef::operator=(const HostRef& h) {
+	m_HostData = JPEnv::getHost()->acquireRef(h.m_HostData);
+	return *this;
+}
+
 	
 HostRef* HostRef::copy()
 {
@@ -392,7 +405,7 @@ JCharString::~JCharString()
 {
 	if (m_Value != NULL)
 	{
-		delete m_Value;
+		delete[] m_Value;
 	}
 }
 	

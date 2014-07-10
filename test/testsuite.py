@@ -14,42 +14,34 @@
 #   limitations under the License.
 #   
 #*****************************************************************************
-import unittest, os, sys, new
-from jpypetest import *
+import unittest
 
 import jpype
 import os.path
+import pkgutil
+import sys
 
 def suite() :
-	return unittest.TestSuite( (
-		numeric.suite(),
-		attr.suite(),
-		array.suite(),
-		objectwrapper.suite(),
-		proxy.suite(), 
-		exc.suite(), 
-		serial.suite(),	  
-		mro.suite(),
-	))
-	
-import jpype
+        loader = unittest.defaultTestLoader
+        if len(sys.argv) > 1:
+                names = sys.argv[1:]
+                test_suite = loader.loadTestsFromNames(names)
+        else:
+                import jpypetest
+                pkgpath = os.path.dirname(jpypetest.__file__)
+                names = ["jpypetest.%s" % name for _, name,
+                         _ in pkgutil.iter_modules([pkgpath])]
+                test_suite = loader.loadTestsFromNames(names)
+	return test_suite 
 
 def runTest() :	
-	root = os.path.abspath(os.path.dirname(__file__))
-
-	print "Running testsuite using JVM", jpype.getDefaultJVMPath()
-	jpype.startJVM(jpype.getDefaultJVMPath(), "-ea", "-Xmx256M", "-Xms64M",
-				   "-Djava.class.path=./classes%s%s%sclasses" % (os.pathsep, root, os.sep))
-
 	runner = unittest.TextTestRunner()
-	runner.run(suite())
+	result = runner.run(suite())
 	
-	s = slice(2, 4)
-	print s, dir(s)
-	
-	jpype.shutdownJVM()	
+        if jpype.isJVMStarted():
+                jpype.shutdownJVM()	
+	if not result.wasSuccessful():
+		sys.exit(-1)
 
 if __name__ == '__main__' :
 	runTest()
-	
-	

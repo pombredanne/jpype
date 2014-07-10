@@ -15,7 +15,7 @@
 #   
 #*****************************************************************************
 from jpype import JException, java, JavaException, JProxy, JPackage
-import unittest, common
+import common
 import traceback
 
 def throwIOException() :
@@ -23,9 +23,6 @@ def throwIOException() :
 
 def throwByJavaException() :
 	JPackage('jpype').exc.ExceptionTest.throwIOException()
-
-def suite() :
-	return unittest.makeSuite(ExceptionTestCase)
 
 class ExceptionTestCase(common.JPypeTestCase) :
 	def testExceptionThrown(self) :
@@ -69,4 +66,25 @@ class ExceptionTestCase(common.JPypeTestCase) :
 		p = JProxy(self.jpype.exc.ExceptionThrower, dict=d)
 		
 		assert self.jpype.exc.ExceptionTest.delegateThrow(p)
-	
+
+ 	def testExceptionPYEXCName(self) :
+ 		e = self.jpype.exc.ChildTestException()
+                name = "jpype.exc.ChildTestExceptionPyRaisable"
+                assert name == e.PYEXC.__name__
+
+ 	def testExceptionInstanceof(self) :
+ 		e = self.jpype.exc.ChildTestException()
+                assert isinstance(e, self.jpype.exc.ParentTestException)
+
+ 	def testExceptionPYEXCInstanceof(self) :
+ 		e = self.jpype.exc.ChildTestException()
+                assert issubclass(e.PYEXC,
+                                  self.jpype.exc.ParentTestException.PYEXC)
+
+        def testThrowChildExceptionFromCatchJExceptionParentClass(self) :
+		try :
+			self.jpype.exc.ExceptionTest.throwChildTestException()
+			assert False
+		except JException(self.jpype.exc.ParentTestException), ex :
+                        pyexc = self.jpype.exc.ChildTestException.PYEXC
+                        assert isinstance(ex, pyexc)

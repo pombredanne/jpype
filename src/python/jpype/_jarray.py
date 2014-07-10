@@ -15,6 +15,7 @@
 #   
 #*****************************************************************************
 import operator
+import sys
 import _jpype
 import _jclass
 import _jwrapper
@@ -52,9 +53,13 @@ class _JavaArrayClass(object) :
 		_jpype.setArrayItem(self.__javaobject__, ndx, val)
 		
 	def __getslice__(self, i, j) : 
+		if j == sys.maxint:
+			j = _jpype.getArrayLength(self.__javaobject__)
 		return _jpype.getArraySlice(self.__javaobject__, i, j)
 		
 	def __setslice__(self, i, j, v) : 
+		if j == sys.maxint:
+			j = _jpype.getArrayLength(self.__javaobject__)
 		_jpype.setArraySlice(self.__javaobject__, i, j, v)
 
 def _jarrayInit(self, *args) :
@@ -73,7 +78,7 @@ def _jarrayInit(self, *args) :
 		_JavaArrayClass.__init__(self, _jpype.newArray(self.__class__.__javaclass__, sz))
 		
 		if values is not None :
-			_jpype.setArrayValues(self.__javaobject__, values)
+			_jpype.setArraySlice(self.__javaobject__, 0, sz, values)
 		
 	
 class _JavaArrayIter(object) :
@@ -126,7 +131,7 @@ def JArray(t, ndims=1) :
 		t = t.__name__
 		
 	elif not isinstance(t, str) and not isinstance(t, unicode) :
-		raise TypeError, "Argument must be a java class, java array class, java wrapper or string represeing a java class"
+		raise TypeError, "Argument must be a java class, java array class, java wrapper or string representing a java class"
 		
 	arrayTypeName = t + ('[]'*ndims)
 	

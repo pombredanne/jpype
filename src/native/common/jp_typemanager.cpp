@@ -1,5 +1,5 @@
 /*****************************************************************************
-   Copyright 2004 Steve Ménard
+   Copyright 2004 Steve Menard
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,61 +16,58 @@
 *****************************************************************************/   
 #include <jpype.h>
 
+namespace {
 //AT's on porting:
-//  1) the original definition of global static object leads to crashing
-//on HP-UX platform. Cause: it is suspected to be an undefined order of initialization of static objects
+// 1) TODO: test on HP-UX platform. Cause: it is suspected to be an undefined order of initialization of static objects
 //
 //  2) TODO: in any case, use of static objects may impose problems in multi-threaded environment.
-//Therefore, they must be guarded with a mutex.
-typedef map<JPTypeName::ETypes, JPType*> TypeMap;
-typedef map<string, JPClass* > JavaClassMap;
-typedef map<string, JPArrayClass* > JavaArrayClassMap;
+	typedef map<JPTypeName::ETypes, JPType*> TypeMap;
+	typedef map<string, JPClass* > JavaClassMap;
+	typedef map<string, JPArrayClass* > JavaArrayClassMap;
 
-static JavaArrayClassMap javaArrayClassMap;
+	TypeMap typeMap;
+	JavaClassMap javaClassMap;
+	JavaArrayClassMap javaArrayClassMap;
 
-// Warning: this eliminates "static initalization order" problem but should also be guarded with a lock for MT
-template <class _T> _T& GetMap()
-{
-	static _T container;
-	return container;
+//	TypeMap typeMap;
+//	JavaClassMap javaClassMap;
+//	JavaArrayClassMap javaArrayClassMap;
 }
 
-#define GET_TypeMap GetMap<TypeMap>
-#define GET_JavaClassMap GetMap<JavaClassMap>
-#define GET_JavaArrayClassMap GetMap<JavaArrayClassMap>
+namespace JPTypeManager {
 
-void JPTypeManager::init()
+void init()
 {
-	GET_TypeMap()[JPTypeName::_void] = new JPVoidType();			
-	GET_TypeMap()[JPTypeName::_byte] = new JPByteType();			
-	GET_TypeMap()[JPTypeName::_short] = new JPShortType();			
-	GET_TypeMap()[JPTypeName::_int] = new JPIntType();			
-	GET_TypeMap()[JPTypeName::_long] = new JPLongType();			
-	GET_TypeMap()[JPTypeName::_float] = new JPFloatType();			
-	GET_TypeMap()[JPTypeName::_double] = new JPDoubleType();			
-	GET_TypeMap()[JPTypeName::_char] = new JPCharType();			
-	GET_TypeMap()[JPTypeName::_boolean] = new JPBooleanType();				
-	GET_TypeMap()[JPTypeName::_string] = new JPStringType();			
-	GET_TypeMap()[JPTypeName::_class] = new JPClassType();	
+	typeMap[JPTypeName::_void] = new JPVoidType();
+	typeMap[JPTypeName::_byte] = new JPByteType();
+	typeMap[JPTypeName::_short] = new JPShortType();
+	typeMap[JPTypeName::_int] = new JPIntType();
+	typeMap[JPTypeName::_long] = new JPLongType();
+	typeMap[JPTypeName::_float] = new JPFloatType();
+	typeMap[JPTypeName::_double] = new JPDoubleType();
+	typeMap[JPTypeName::_char] = new JPCharType();
+	typeMap[JPTypeName::_boolean] = new JPBooleanType();
+	typeMap[JPTypeName::_string] = new JPStringType();
+	typeMap[JPTypeName::_class] = new JPClassType();
 
 	// Preload the "primitive" types
-	GET_JavaClassMap()["byte"] = new JPClass(JPTypeName::fromSimple("byte"), JPJni::getByteClass());
-	GET_JavaClassMap()["short"] = new JPClass(JPTypeName::fromSimple("short"), JPJni::getShortClass());
-	GET_JavaClassMap()["int"] = new JPClass(JPTypeName::fromSimple("int"), JPJni::getIntegerClass());
-	GET_JavaClassMap()["long"] = new JPClass(JPTypeName::fromSimple("long"), JPJni::getLongClass());
-	GET_JavaClassMap()["float"] = new JPClass(JPTypeName::fromSimple("float"), JPJni::getFloatClass());
-	GET_JavaClassMap()["double"] = new JPClass(JPTypeName::fromSimple("double"), JPJni::getDoubleClass());
-	GET_JavaClassMap()["char"] = new JPClass(JPTypeName::fromSimple("char"), JPJni::getCharacterClass());
-	GET_JavaClassMap()["boolean"] = new JPClass(JPTypeName::fromSimple("boolean"), JPJni::getBooleanClass());
-	GET_JavaClassMap()["void"] = new JPClass(JPTypeName::fromSimple("void"), JPJni::getVoidClass());
+	javaClassMap["byte"] = new JPClass(JPTypeName::fromSimple("byte"), JPJni::getByteClass());
+	javaClassMap["short"] = new JPClass(JPTypeName::fromSimple("short"), JPJni::getShortClass());
+	javaClassMap["int"] = new JPClass(JPTypeName::fromSimple("int"), JPJni::getIntegerClass());
+	javaClassMap["long"] = new JPClass(JPTypeName::fromSimple("long"), JPJni::getLongClass());
+	javaClassMap["float"] = new JPClass(JPTypeName::fromSimple("float"), JPJni::getFloatClass());
+	javaClassMap["double"] = new JPClass(JPTypeName::fromSimple("double"), JPJni::getDoubleClass());
+	javaClassMap["char"] = new JPClass(JPTypeName::fromSimple("char"), JPJni::getCharacterClass());
+	javaClassMap["boolean"] = new JPClass(JPTypeName::fromSimple("boolean"), JPJni::getBooleanClass());
+	javaClassMap["void"] = new JPClass(JPTypeName::fromSimple("void"), JPJni::getVoidClass());
 }
 
-JPClass* JPTypeManager::findClass(JPTypeName& name)
+JPClass* findClass(const JPTypeName& name)
 {
 	// Fist check in the map ...
-	JavaClassMap::iterator cur = GET_JavaClassMap().find(name.getSimpleName());		
+	JavaClassMap::iterator cur = javaClassMap.find(name.getSimpleName());
 	
-	if (cur != GET_JavaClassMap().end())
+	if (cur != javaClassMap.end())
 	{
 		return cur->second;
 	}
@@ -86,7 +83,7 @@ JPClass* JPTypeManager::findClass(JPTypeName& name)
 	JPClass* res = new JPClass(name, cls);
 	
 	// Register it here before we do anything else
-	GET_JavaClassMap()[name.getSimpleName()] = res;
+	javaClassMap[name.getSimpleName()] = res;
 	
 	// Finish loading it
 	res->postLoad();		
@@ -95,12 +92,12 @@ JPClass* JPTypeManager::findClass(JPTypeName& name)
 	TRACE_OUT;
 }
 
-JPArrayClass* JPTypeManager::findArrayClass(JPTypeName& name)
+JPArrayClass* findArrayClass(const JPTypeName& name)
 {
 	// Fist check in the map ...
-	JavaArrayClassMap::iterator cur = GET_JavaArrayClassMap().find(name.getSimpleName());		
+	JavaArrayClassMap::iterator cur = javaArrayClassMap.find(name.getSimpleName());
 	
-	if (cur != GET_JavaArrayClassMap().end())
+	if (cur != javaArrayClassMap.end())
 	{
 		return cur->second;
 	}
@@ -114,18 +111,17 @@ JPArrayClass* JPTypeManager::findArrayClass(JPTypeName& name)
 	JPArrayClass* res = new JPArrayClass(name, cls);
 	
 	// Register it here before we do anything else
-	GET_JavaArrayClassMap()[name.getSimpleName()] = res;
+	javaArrayClassMap[name.getSimpleName()] = res;
 	
 	return res;
 }
 
-JPType* JPTypeManager::getType(JPTypeName& t)
+JPType* getType(const JPTypeName& t)
 {
-	JPCleaner cleaner;
 	TRACE_IN("JPTypeManager::getType");
-	map<JPTypeName::ETypes, JPType*>::iterator it = GET_TypeMap().find(t.getType());
+	map<JPTypeName::ETypes, JPType*>::iterator it = typeMap.find(t.getType());
 	
-	if (it != GET_TypeMap().end())
+	if (it != typeMap.end())
 	{
 		return it->second;
 	}
@@ -143,16 +139,38 @@ JPType* JPTypeManager::getType(JPTypeName& t)
 	TRACE_OUT;
 }
 
-void JPTypeManager::flushCache()
+void shutdown()
 {
-	// TODO delete the values 
-	GET_JavaClassMap().clear();
-	GET_JavaArrayClassMap().clear();
+	flushCache();
+
+	// delete primitive types
+	for(TypeMap::iterator i = typeMap.begin(); i != typeMap.end(); ++i)
+	{
+		delete i->second;
+	}
 }
 
-int JPTypeManager::getLoadedClasses()
+void flushCache()
+{
+	for(JavaClassMap::iterator i = javaClassMap.begin(); i != javaClassMap.end(); ++i)
+	{
+		delete i->second;
+	}
+
+	for(JavaArrayClassMap::iterator i = javaArrayClassMap.begin();
+			i != javaArrayClassMap.end(); ++i)
+	{
+		delete i->second;
+	}
+
+	javaClassMap.clear();
+	javaArrayClassMap.clear();
+}
+
+int getLoadedClasses()
 {
 	// dignostic tools ... unlikely to load more classes than int can hold ...
-	return (int)(GET_JavaClassMap().size() + GET_JavaArrayClassMap().size());
+	return (int)(javaClassMap.size() + javaArrayClassMap.size());
 }
 
+} // end of namespace JPTypeManager

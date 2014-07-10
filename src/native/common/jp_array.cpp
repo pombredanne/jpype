@@ -1,5 +1,5 @@
 /*****************************************************************************
-   Copyright 2004 Steve Ménard
+   Copyright 2004 Steve Mï¿½nard
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 *****************************************************************************/   
 #include <jpype.h>
 
-JPArray::JPArray(JPTypeName name, jarray inst) 
+JPArray::JPArray(const JPTypeName& name, jarray inst)
 {
 	m_Class = JPTypeManager::findArrayClass(name);
 	m_Object = (jarray)JPEnv::getJava()->NewGlobalRef(inst);
@@ -44,13 +44,20 @@ vector<HostRef*> JPArray::getRange(int start, int stop)
 	TRACE_OUT;
 }	
 
+PyObject* JPArray::getSequenceFromRange(int start, int stop)
+{
+//	TRACE_IN("JPArray::getSequenceFromRange");
+	JPType* compType = m_Class->getComponentType();
+//	TRACE2("Component type", compType->getName().getSimpleName());
+
+	return compType->getArrayRangeToSequence(m_Object, start, stop);
+}
+
 void JPArray::setRange(int start, int stop, vector<HostRef*>& val)
 {
-	JPCleaner cleaner;
-	
 	JPType* compType = m_Class->getComponentType();
 	
-	int len = stop-start;
+	unsigned int len = stop-start;
 	size_t plength = val.size();
 	
 	if (len != plength)
@@ -70,7 +77,26 @@ void JPArray::setRange(int start, int stop, vector<HostRef*>& val)
 	}	
 			
 	compType->setArrayRange(m_Object, start, stop-start, val);
-}	
+}
+
+void JPArray::setRange(int start, int stop, PyObject* sequence)
+{
+	JPType* compType = m_Class->getComponentType();
+
+	unsigned int len = stop-start;
+	// check bounds of sequence which is to be assigned
+	HostRef* ptr = new HostRef(sequence);
+	unsigned int plength = JPEnv::getHost()->getSequenceLength(ptr);
+	delete ptr;
+	if (len != plength)
+	{
+		std::stringstream out;
+		out << "Slice assignment must be of equal lengths : " << len << " != " << plength;
+		RAISE(JPypeException, out.str());
+	}
+
+	compType->setArrayRange(m_Object, start, len, sequence);
+}
 
 void JPArray::setItem(int ndx, HostRef* val)
 {
